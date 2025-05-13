@@ -3,7 +3,7 @@
     <!-- 顶部导航栏 -->
     <el-header class="header fixed-topbar">
       <div class="logo">旅行协作打卡系统</div>
-      <el-menu mode="horizontal" :router="true" class="nav-menu">
+      <el-menu mode="horizontal" :router="true" :default-active="activeMenuIndex" class="nav-menu">
         <el-menu-item index="/plaza">广场</el-menu-item>
         <el-menu-item index="/my-journeys">我的旅程</el-menu-item>
         <el-menu-item index="/travel-records">旅行记录</el-menu-item>
@@ -34,14 +34,27 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 
 const router = useRouter();
+const route = useRoute();
 // const username = ref(localStorage.getItem('username') || ''); // 读取本地存储用户名（已注释）
 // const userAvatar = ref(localStorage.getItem('userAvatar') || ''); // 读取本地存储头像（已注释）
 const username = ref('蘑菇');
 const userAvatar = require('@/assets/mogu.jpg');
+
+// 计算当前激活的菜单项
+const activeMenuIndex = computed(() => {
+  // 如果当前路由是 profile 或其子路由，则不激活主导航中的任何项
+  if (route.path.startsWith('/profile')) {
+    return ''; // 返回一个空字符串或任何不存在的 index
+  }
+  // 否则，让 el-menu 根据路由自动匹配
+  // el-menu 在 router 模式下，会优先使用 route.path 进行匹配
+  // 如果需要更精确的控制，可以返回 route.path 或 route.matched 中更合适的路径
+  return route.path; 
+});
 
 // 计算用户名的首字母作为头像显示
 //const userInitials = computed(() => {

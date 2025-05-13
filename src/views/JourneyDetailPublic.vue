@@ -100,7 +100,6 @@ const journey = ref({
     creator: {
         id: 101, // 发起人ID
         name: '鱼丸粗面',
-        // 使用正确的 require 路径 (假设有这个头像文件)
         avatar: require('@/assets/avatar3.jpg')
     },
     // 添加详细行程安排
@@ -110,7 +109,6 @@ const journey = ref({
         { date: '2025-06-16', time: '14:00', activity: '参观大昭寺及八廓街' },
         { date: '2025-06-17', time: '08:00', activity: '前往纳木错，欣赏湖光山色' },
         { date: '2025-06-18', time: '10:00', activity: '参观色拉寺，观看辩经' },
-        // ... 更多行程安排
     ]
 });
 
@@ -139,13 +137,13 @@ onMounted(() => {
                 startDate: '2025-05-20',
                 endDate: '2025-05-25',
                 budget: 2000,
-                coverImage: require('@/assets/dali.png'),
+                coverImage: require('@/assets/avatar3.jpg'),
                 publishDate: '2025-04-01',
                 description: '一起探索大理古城，感受洱海边的浪漫，体验白族风情。计划环洱海骑行，参观崇圣寺三塔，品尝当地美食。',
                 tags: ['文化', '美食', '摄影', '休闲'],
                 creator: {
-                    id: 1, // 假设是蘑菇发布的
-                    name: '蘑菇',
+                    id: 1, 
+                    name: '李野',
                     avatar: require('@/assets/mogu.jpg')
                 },
                 itinerary: [

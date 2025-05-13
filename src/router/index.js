@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import Layout from '@/views/Layout.vue';
+import Profile from '@/views/Profile.vue';
+import ProfileEdit from '@/views/ProfileEdit.vue';
 
 const routes = [
     {
@@ -19,7 +21,7 @@ const routes = [
             {
                 path: 'plaza',
                 name: 'Plaza',
-                component: () => import('../views/Plaza.vue')
+                component: () => import('@/views/Plaza.vue')
             },
             {
                 path: 'my-journeys',
@@ -34,7 +36,12 @@ const routes = [
             {
                 path: 'profile',
                 name: 'Profile',
-                component: () => import('@/views/Profile.vue')
+                component: Profile
+            },
+            {
+                path: 'profile/edit',
+                name: 'ProfileEdit',
+                component: ProfileEdit
             },
             {
                 path: 'journey/create',
@@ -51,10 +58,11 @@ const routes = [
                 name: 'JourneyManage',
                 component: () => import('../views/JourneyManage.vue')
             },
+
             {
-                path: 'journey/:id/checkin',
-                name: 'JourneyCheckin',
-                component: () => import('../views/JourneyCheckin.vue')
+                path: 'journey/:id/progress',
+                name: 'JourneyInProgress',
+                component: () => import('@/views/JourneyInProgressView.vue')
             }
         ]
     }

@@ -42,13 +42,13 @@
                 </div>
 
                 <el-tabs v-model="activeTab">
-                    <el-tab-pane label="进行中" name="ongoing">
-                        <div class="journey-list">
-                            <el-card v-for="journey in ongoingJourneys" :key="journey.id" class="journey-card">
+                    <el-tab-pane label="规划中" name="planning">
+                        <div class="journey-list" v-if="planningJourneys.length > 0">
+                            <el-card v-for="journey in planningJourneys" :key="journey.id" class="journey-card">
                                 <template #header>
                                     <div class="journey-header">
                                         <h3>{{ journey.title }}</h3>
-                                        <el-tag type="success">进行中</el-tag>
+                                        <el-tag type="warning">规划中</el-tag>
                                     </div>
                                 </template>
                                 <div class="journey-content-wrapper">
@@ -65,8 +65,8 @@
                                             <span class="budget">预算：¥{{ journey.budget }}</span>
                                         </div>
                                         <div class="journey-actions">
-                                            <el-button type="primary" @click="manageJourney(journey.id)">管理旅程</el-button>
-                                            <el-button @click="viewJourney(journey.id)">查看详情</el-button>
+                                            <el-button type="primary" @click="startTrip(journey.id)">开始出发</el-button>
+                                            <el-button @click="manageJourney(journey.id)">管理旅程</el-button>
                                         </div>
                                     </div>
                                     <div class="journey-image" v-if="journey.coverImage">
@@ -75,14 +75,51 @@
                                 </div>
                             </el-card>
                         </div>
+                        <el-empty v-else description="暂无规划中的行程"></el-empty>
                     </el-tab-pane>
-                    <el-tab-pane label="已发布" name="published">
-                        <div class="journey-list">
-                            <el-card v-for="journey in publishedJourneys" :key="journey.id" class="journey-card">
+
+                    <el-tab-pane label="旅行中" name="inProgress">
+                        <div class="journey-list" v-if="inProgressJourneys.length > 0">
+                            <el-card v-for="journey in inProgressJourneys" :key="journey.id" class="journey-card in-progress-card">
                                 <template #header>
                                     <div class="journey-header">
                                         <h3>{{ journey.title }}</h3>
-                                        <el-tag type="info">招募中</el-tag>
+                                        <el-tag type="success">旅行中</el-tag>
+                                    </div>
+                                </template>
+                                <div class="journey-content-wrapper">
+                                    <div class="journey-content">
+                                        <p>{{ journey.description }}</p>
+                                        <div class="journey-tags">
+                                            <el-tag v-for="tag in journey.tags" :key="tag" size="small" class="journey-tag">
+                                                {{ tag }}
+                                            </el-tag>
+                                        </div>
+                                        <div class="journey-info">
+                                            <span>开始时间：{{ journey.startDate }}</span>
+                                            <span>结束时间：{{ journey.endDate }}</span>
+                                            <span class="budget">预算：¥{{ journey.budget }}</span>
+                                        </div>
+                                        <div class="journey-actions">
+                                            <el-button type="success" @click="goToInProgressJourneyView(journey.id)">查看行程进展</el-button>
+                                        </div>
+                                    </div>
+                                    <div class="journey-image" v-if="journey.coverImage">
+                                        <img :src="journey.coverImage" :alt="journey.title">
+                                    </div>
+                                </div>
+                            </el-card>
+                        </div>
+                        <el-empty v-else description="暂无旅行中的行程"></el-empty>
+                    </el-tab-pane>
+
+                    <el-tab-pane label="组队中" name="recruiting">
+                        <div class="journey-list" v-if="recruitingJourneys.length > 0">
+                            <el-card v-for="journey in recruitingJourneys" :key="journey.id" class="journey-card">
+                                <template #header>
+                                    <div class="journey-header">
+                                        <h3>{{ journey.title }}</h3>
+                                        <el-tag type="info">组队中</el-tag>
                                     </div>
                                 </template>
                                 <div class="journey-content-wrapper">
@@ -95,13 +132,13 @@
                                         </div>
                                         <div class="journey-info">
                                             <span>发布时间：{{ journey.publishDate }}</span>
-                                            <span>开始时间：{{ journey.startDate }}</span>
-                                            <span>结束时间：{{ journey.endDate }}</span>
+                                            <span>计划开始：{{ journey.startDate }}</span>
+                                            <span>预计结束：{{ journey.endDate }}</span>
                                             <span class="budget">预算：¥{{ journey.budget }}</span>
                                         </div>
                                         <div class="journey-actions">
-                                            <el-button type="primary" @click="manageJourney(journey.id)">管理旅程</el-button>
-                                            <el-button @click="viewJourney(journey.id)">查看详情</el-button>
+                                            <el-button type="primary" @click="manageJourney(journey.id)">管理</el-button>
+                                            <el-button @click="viewJourneyDetail(journey.id)">查看详情</el-button>
                                         </div>
                                     </div>
                                     <div class="journey-image" v-if="journey.coverImage">
@@ -110,6 +147,7 @@
                                 </div>
                             </el-card>
                         </div>
+                        <el-empty v-else description="暂无组队中的行程"></el-empty>
                     </el-tab-pane>
                 </el-tabs>
             </el-col>
@@ -123,23 +161,22 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 
 const router = useRouter();
-const activeTab = ref('ongoing');
+const activeTab = ref('planning'); // 默认显示规划中
 const calendarDate = ref(new Date());
 
 const user = ref({
   nickname: '蘑菇',
   avatar: require('@/assets/mogu.jpg'),
-  journeyCount: 5,
-  checkinCount: 10
+  journeyCount: 5, // 这个可以动态计算 allJourneys.length
+  checkinCount: 10 // 这个需要后端支持或更复杂的打卡记录管理
 });
 
-// 计算用户头像首字母
 const userInitials = computed(() => {
     return user.value.nickname ? user.value.nickname.charAt(0).toUpperCase() : '';
 });
 
-// 模拟数据
-const ongoingJourneys = ref([
+// 所有行程的模拟数据
+const allJourneys = ref([
   {
     id: 1,
     title: '云南大理之旅',
@@ -149,11 +186,8 @@ const ongoingJourneys = ref([
     budget: 2000,
     coverImage: require('@/assets/dali.png'),
     tags: ['文化', '美食', '摄影'],
-    status: 'ongoing'
-  }
-]);
-
-const publishedJourneys = ref([
+    status: 'planning' // 规划中
+  },
   {
     id: 2,
     title: '西藏朝圣之旅',
@@ -162,18 +196,67 @@ const publishedJourneys = ref([
     endDate: '2025-06-25',
     budget: 5200,
     coverImage: require('@/assets/tibet.png'),
-    publishDate: '2025-03-01',
+    publishDate: '2025-03-01', // 组队中状态特有
     tags: ['文化', '摄影', '自然'],
-    status: 'published'
+    status: 'recruiting' // 组队中
+  },
+  {
+    id: 3,
+    title: '日本东京动漫考察',
+    description: '秋叶原、涩谷，动漫迷的梦想之旅',
+    startDate: '2025-04-10',
+    endDate: '2025-04-18',
+    budget: 8000,
+    coverImage: require('@/assets/tokyo.jpg'), // 假设有这张图
+    tags: ['动漫', '购物', '都市'],
+    status: 'inProgress' // 旅行中
   }
 ]);
+
+// 更新用户行程总数
+user.value.journeyCount = computed(() => allJourneys.value.length);
+
+const formatCalendarHeader = (date) => {
+  if (!date) return '';
+  // ElCalendar 的 header slotprop `date` 是一个字符串 "YYYY 年 M 月"
+  // 我们需要从中提取年份和月份
+  // 或者，如果 ElCalendar 传递的是 Date 对象或可解析的日期字符串，则可以直接使用
+  let year, month;
+  if (typeof date === 'string' && date.includes('年') && date.includes('月')) {
+    const parts = date.replace('年', '-').replace('月', '').split('-');
+    year = parseInt(parts[0]);
+    month = parseInt(parts[1]);
+  } else { // 兜底，尝试将其作为Date对象或可解析日期字符串处理
+    const dateObj = new Date(date);
+    if (!isNaN(dateObj.getFullYear())) {
+        year = dateObj.getFullYear();
+        month = dateObj.getMonth() + 1; // getMonth is 0-indexed
+    } else {
+        return date; // 无法解析，返回原样
+    }
+  }
+  return `${year}年${month}月`;
+};
+
+// 计算属性分离不同状态的行程
+const recruitingJourneys = computed(() => {
+  return allJourneys.value.filter(j => j.status === 'recruiting');
+});
+
+const planningJourneys = computed(() => {
+  return allJourneys.value.filter(j => j.status === 'planning');
+});
+
+const inProgressJourneys = computed(() => {
+  return allJourneys.value.filter(j => j.status === 'inProgress');
+});
+
 
 // 收集所有行程的出行日期（范围内每一天）
 const journeyDates = ref([]);
 const collectJourneyDates = () => {
     journeyDates.value = [];
-    const allJourneys = [...ongoingJourneys.value, ...publishedJourneys.value];
-    allJourneys.forEach(journey => {
+    allJourneys.value.forEach(journey => {
         if (journey.startDate && journey.endDate) {
             const start = new Date(journey.startDate);
             const end = new Date(journey.endDate);
@@ -201,72 +284,69 @@ const getDateClass = (data) => {
 };
 
 // 检查日期是否有旅程
-const getJourneyOnDate = (date) => {
-  const allJourneys = [...ongoingJourneys.value, ...publishedJourneys.value];
-  return allJourneys.some(journey => {
-    const startDate = new Date(journey.startDate);
-    const endDate = new Date(journey.endDate);
-    const checkDate = new Date(date);
-    // 日期比较需要注意时区问题，简单比较 YYYY-MM-DD 字符串更可靠
-    const checkDateStr = checkDate.toISOString().slice(0, 10);
-    return journeyDates.value.includes(checkDateStr);
-  });
-};
-
-// 格式化日历头部为中文
-const formatCalendarHeader = (date) => {
-    // Element Plus 的日历组件传递的是字符串格式的日期
-    const dateObj = new Date(date);
-    const year = dateObj.getFullYear();
-    const month = dateObj.getMonth() + 1;
-    return `${year}年${month}月`;
+const getJourneyOnDate = (dateString) => {
+    return journeyDates.value.includes(dateString);
 };
 
 // 检查是否是旅程开始日期
-const getJourneyStartDate = (date) => {
-    const allJourneys = [...ongoingJourneys.value, ...publishedJourneys.value];
-    return allJourneys.some(journey => journey.startDate === date);
+const getJourneyStartDate = (dateString) => {
+    return allJourneys.value.find(j => j.startDate === dateString);
 };
 
 // 获取旅程标题
-const getJourneyTitle = (date) => {
-    const allJourneys = [...ongoingJourneys.value, ...publishedJourneys.value];
-    const journey = allJourneys.find(journey => journey.startDate === date);
-    // 截取前两个字作为标签演示
-    return journey ? journey.title.slice(0, 2) : '出发'; 
+const getJourneyTitle = (dateString) => {
+    const journey = allJourneys.value.find(j => j.startDate === dateString);
+    return journey ? journey.title : '';
 };
 
 // 查看特定日期的旅程
-const viewJourneyOnDate = (date) => {
-    const allJourneys = [...ongoingJourneys.value, ...publishedJourneys.value];
-    const journey = allJourneys.find(journey => journey.startDate === date);
+const viewJourneyOnDate = (dateString) => {
+    const journey = allJourneys.value.find(j => j.startDate === dateString);
     if (journey) {
-        // 点击日历标签跳转到管理页面
-        router.push(`/manage/${journey.id}`);
+        if (journey.status === 'inProgress') {
+            router.push({ name: 'JourneyCheckin', params: { id: journey.id } });
+        } else {
+            // 对于组队中和规划中的行程，日历点击依然跳转到公开详情页或管理页
+            // 这里假设跳转到公开详情页，如果需要管理页，逻辑需相应调整
+             router.push({ name: 'JourneyDetailPublic', params: { id: journey.id } });
+        }
     }
 };
 
 // 跳转到创建行程页面
 const goToCreateJourney = () => {
-    router.push('/journey/create');
+  router.push({ name: 'CreateJourney' });
 };
 
 // 管理旅程
 const manageJourney = (journeyId) => {
-  console.log('管理旅程:', journeyId);
-  // 跳转到管理页面
-  router.push(`/manage/${journeyId}`);
+  // 区分管理页面，这里暂时用 JourneyManage
+  router.push({ name: 'JourneyManage', params: { id: journeyId } });
 };
 
 // 查看旅程详情
-const viewJourney = (journeyId) => {
-  console.log('查看旅程:', journeyId);
-  // "查看详情" 也跳转到管理页面
-  router.push(`/manage/${journeyId}`); 
+const viewJourneyDetail = (journeyId) => {
+  router.push({ name: 'JourneyDetailPublic', params: { id: journeyId } });
+};
+
+// 开始旅行
+const startTrip = (journeyId) => {
+  const journey = allJourneys.value.find(j => j.id === journeyId);
+  if (journey) {
+    journey.status = 'inProgress';
+    ElMessage.success(`行程 "${journey.title}" 已开始！`);
+    activeTab.value = 'inProgress'; // 切换到旅行中标签页
+  }
+};
+
+// 去打卡页面 -> 修改为去进行中行程管理页面
+const goToInProgressJourneyView = (journeyId) => {
+  router.push({ name: 'JourneyInProgress', params: { id: journeyId } }); // 新的路由名称
 };
 
 onMounted(() => {
     collectJourneyDates();
+    // 可以在这里从后端加载真实数据替换模拟数据
 });
 
 </script>
@@ -505,5 +585,14 @@ onMounted(() => {
     height: 150px;
     display: block;
     object-fit: cover;
+}
+
+/* 为旅行中卡片添加特定样式 */
+.in-progress-card .el-card__header {
+    background-color: #f0f9eb; /* 淡绿色背景 */
+}
+.in-progress-card .journey-header .el-tag {
+    background-color: #67C23A; /* Element Plus 成功色 */
+    color: white;
 }
 </style> 

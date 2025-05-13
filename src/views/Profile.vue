@@ -1,236 +1,176 @@
 <template>
     <div class="profile-container">
-        <el-row :gutter="20">
-            <!-- 个人信息卡片 -->
-            <el-col :span="8">
-                <el-card class="profile-card">
-                    <div class="profile-header">
-                        <el-avatar :size="100" :src="userInfo.avatar">{{ userInitials }}</el-avatar>
-                        <h2>{{ userInfo.username }}</h2>
-                        <p class="signature">{{ userInfo.signature || '这个人很懒，什么都没留下~' }}</p>
+        <!-- 顶部个人信息 -->
+        <el-card class="profile-header-card">
+            <div class="profile-header">
+                <el-avatar :size="100" :src="user.avatar">{{ user.nickname.charAt(0) }}</el-avatar>
+                <div class="user-details">
+                    <h2 class="nickname">{{ user.nickname }}</h2>
+                    <p class="signature">{{ user.signature || '这位用户很懒，什么都没留下...' }}</p>
+                    <div class="user-stats">
+                        <span><el-icon><Clock /></el-icon> 打卡次数: <b>{{ user.checkinCount }}</b></span>
+                        <span><el-icon><Flag /></el-icon> 完成旅程: <b>{{ user.completedJourneysCount }}</b></span>
+                        <span><el-icon><Trophy /></el-icon> 获得成就: <b>{{ user.achievementsCount }}</b></span>
                     </div>
-                    <div class="profile-stats">
-                        <div class="stat-item">
-                            <div class="stat-value">{{ userInfo.checkins }}</div>
-                            <div class="stat-label">打卡次数</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">{{ userInfo.journeys }}</div>
-                            <div class="stat-label">完成旅程</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">{{ userInfo.skills }}</div>
-                            <div class="stat-label">技能数</div>
-                        </div>
-                    </div>
-                </el-card>
-            </el-col>
+                     <el-button type="primary" plain @click="goToEditProfile" class="edit-profile-btn">
+                         <el-icon><Edit /></el-icon> 编辑个人信息
+                     </el-button>
+                </div>
+            </div>
+        </el-card>
 
-            <!-- 信息编辑卡片 -->
-            <el-col :span="16">
-                <el-card>
-                    <template #header>
-                        <div class="card-header">
-                            <span>个人信息</span>
-                            <el-button type="primary" @click="handleSave" :loading="loading">保存修改</el-button>
-                        </div>
-                    </template>
-                    <el-form
-                        ref="formRef"
-                        :model="form"
-                        :rules="rules"
-                        label-width="100px"
-                        class="profile-form"
-                    >
-                        <el-form-item label="用户名" prop="username">
-                            <el-input v-model="form.username" disabled></el-input>
-                        </el-form-item>
-                        <el-form-item label="个性签名" prop="signature">
-                            <el-input
-                                v-model="form.signature"
-                                type="textarea"
-                                :rows="3"
-                                placeholder="写点什么介绍一下自己吧~"
-                            ></el-input>
-                        </el-form-item>
-                        <el-form-item label="邮箱" prop="email">
-                            <el-input v-model="form.email"></el-input>
-                        </el-form-item>
-                        <el-form-item label="手机号" prop="phone">
-                            <el-input v-model="form.phone"></el-input>
-                        </el-form-item>
-                    </el-form>
-                </el-card>
+        <!-- 已完成的旅程列表 (将被替换) -->
+        <!-- 
+        <el-card class="completed-journeys-card">
+            ...
+        </el-card>
+        -->
 
-                <!-- 修改密码卡片 -->
-                <el-card class="password-card">
-                    <template #header>
-                        <div class="card-header">
-                            <span>修改密码</span>
+        <!-- 新增：我的成就 -->
+        <el-card class="achievements-card profile-section-card">
+            <template #header>
+                <div class="card-header">
+                    <span><el-icon><Trophy /></el-icon> 我的成就</span>
+                </div>
+            </template>
+            <div class="achievements-list" v-if="userAchievements.length > 0">
+                <el-row :gutter="20">
+                    <el-col :xs="24" :sm="12" :md="8" v-for="achievement in userAchievements" :key="achievement.id">
+                        <div class="achievement-item" :class="{ 'achieved': achievement.achieved }">
+                            <el-icon :size="32" class="achievement-icon">
+                                <component :is="achievement.iconComponent" />
+                            </el-icon>
+                            <div class="achievement-info">
+                                <h4>{{ achievement.title }}</h4>
+                                <p>{{ achievement.description }}</p>
+                                <el-tag v-if="achievement.achieved" type="success" effect="light" size="small">已达成</el-tag>
+                                <el-tag v-else type="info" effect="light" size="small">未达成</el-tag>
+                            </div>
                         </div>
-                    </template>
-                    <el-form
-                        ref="passwordFormRef"
-                        :model="passwordForm"
-                        :rules="passwordRules"
-                        label-width="100px"
-                    >
-                        <el-form-item label="当前密码" prop="currentPassword">
-                            <el-input
-                                v-model="passwordForm.currentPassword"
-                                type="password"
-                                show-password
-                            ></el-input>
-                        </el-form-item>
-                        <el-form-item label="新密码" prop="newPassword">
-                            <el-input
-                                v-model="passwordForm.newPassword"
-                                type="password"
-                                show-password
-                            ></el-input>
-                        </el-form-item>
-                        <el-form-item label="确认密码" prop="confirmPassword">
-                            <el-input
-                                v-model="passwordForm.confirmPassword"
-                                type="password"
-                                show-password
-                            ></el-input>
-                        </el-form-item>
-                        <el-form-item>
-                            <el-button type="primary" @click="handleChangePassword" :loading="passwordLoading">
-                                修改密码
-                            </el-button>
-                        </el-form-item>
-                    </el-form>
-                </el-card>
-            </el-col>
-        </el-row>
+                    </el-col>
+                </el-row>
+            </div>
+            <el-empty v-else description="暂无成就，继续努力哦！"></el-empty>
+        </el-card>
+
+        <!-- 新增：历史动态 -->
+        <el-card class="history-card profile-section-card">
+            <template #header>
+                <div class="card-header">
+                    <span><el-icon><Tickets /></el-icon> 历史动态</span>
+                </div>
+            </template>
+            <el-timeline v-if="userHistoryRecords.length > 0" class="profile-timeline">
+                <el-timeline-item
+                    v-for="record in userHistoryRecords"
+                    :key="record.id"
+                    :timestamp="record.time"
+                    :type="record.type || 'primary'"
+                    :icon="record.iconComponent"
+                    size="normal" 
+                >
+                    <h4>{{ record.title }}</h4>
+                    <p>{{ record.description }}</p>
+                </el-timeline-item>
+            </el-timeline>
+            <el-empty v-else description="暂无历史动态"></el-empty>
+        </el-card>
+
     </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ref, onMounted, shallowRef } from 'vue'; // shallowRef for icons
+import { useRouter } from 'vue-router';
+// Updated icon imports
+import { Clock, Flag, Trophy, Edit, Tickets, Location as LocationIcon, StarFilled, Promotion, EditPen as EditPenIcon, CircleCheckFilled as CircleCheckFilledIcon } from '@element-plus/icons-vue';
 
-// 用户信息
-const userInfo = ref({
-    username: localStorage.getItem('username') || '',
-    signature: '热爱旅行，热爱生活',
-    avatar: '',
-    checkins: 42,
-    journeys: 5,
-    skills: 3,
-    email: 'user@example.com',
-    phone: '13800138000'
+const router = useRouter();
+
+// 模拟当前用户信息 (实际应从状态管理或API获取)
+const user = ref({
+    id: 1,
+    nickname: '蘑菇',
+    avatar: require('@/assets/mogu.jpg'),
+    signature: '热爱生活，热爱旅行！',
+    checkinCount: 10,
+    completedJourneysCount: 2,
+    achievementsCount: 5 // This can be dynamically computed from userAchievements.filter(a => a.achieved).length
 });
 
-// 计算用户名首字母作为头像
-const userInitials = computed(() => {
-    return userInfo.value.username ? userInfo.value.username.charAt(0).toUpperCase() : '';
-});
-
-// 表单数据
-const form = ref({
-    username: userInfo.value.username,
-    signature: userInfo.value.signature,
-    email: userInfo.value.email,
-    phone: userInfo.value.phone
-});
-
-// 表单验证规则
-const rules = {
-    signature: [
-        { max: 100, message: '签名不能超过100个字符', trigger: 'blur' }
-    ],
-    email: [
-        { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
-    ],
-    phone: [
-        { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-    ]
-};
-
-// 密码表单数据
-const passwordForm = ref({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-});
-
-// 密码验证规则
-const passwordRules = {
-    currentPassword: [
-        { required: true, message: '请输入当前密码', trigger: 'blur' }
-    ],
-    newPassword: [
-        { required: true, message: '请输入新密码', trigger: 'blur' },
-        { min: 6, message: '密码长度不能小于6位', trigger: 'blur' }
-    ],
-    confirmPassword: [
-        { required: true, message: '请确认新密码', trigger: 'blur' },
-        {
-            validator: (rule, value, callback) => {
-                if (value !== passwordForm.value.newPassword) {
-                    callback(new Error('两次输入的密码不一致'));
-                } else {
-                    callback();
-                }
-            },
-            trigger: 'blur'
-        }
-    ]
-};
-
-const loading = ref(false);
-const passwordLoading = ref(false);
-const formRef = ref(null);
-const passwordFormRef = ref(null);
-
-// 保存个人信息
-const handleSave = async () => {
-    if (!formRef.value) return;
-    
-    try {
-        await formRef.value.validate();
-        loading.value = true;
-        
-        // TODO: 调用API保存个人信息
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        ElMessage.success('保存成功');
-        userInfo.value = { ...userInfo.value, ...form.value };
-    } catch (error) {
-        console.error('保存失败:', error);
-        ElMessage.error('保存失败，请检查表单');
-    } finally {
-        loading.value = false;
+// 新增：用户成就数据 (从 TravelRecords.vue 迁移并重命名)
+const userAchievements = ref([
+    {
+        id: 1, title: '初出茅庐', description: '完成第一次打卡',
+        iconComponent: shallowRef(LocationIcon), achieved: true
+    },
+    {
+        id: 2, title: '旅行达人', description: '完成5次旅程',
+        iconComponent: shallowRef(Trophy), achieved: true
+    },
+    {
+        id: 3, title: '探索先锋', description: '打卡10个不同地点',
+        iconComponent: shallowRef(StarFilled), achieved: true
+    },
+    {
+        id: 4, title: '分享之乐', description: '首次生成旅行手账',
+        iconComponent: shallowRef(Promotion), achieved: false
+    },
+    {
+        id: 5, title: '规划能手', description: '创建第一个行程计划',
+        iconComponent: shallowRef(EditPenIcon), achieved: true // Renamed EditPen to EditPenIcon to avoid conflict
+    },
+    {
+        id: 6, title: '完美旅程', description: '完成一个包含5个以上打卡点的行程',
+        iconComponent: shallowRef(CircleCheckFilledIcon), achieved: false // Renamed CircleCheckFilled to CircleCheckFilledIcon
     }
+]);
+
+// 新增：用户历史动态数据 (从 TravelRecords.vue 迁移并重命名)
+const userHistoryRecords = ref([
+    {
+        id: 1, title: '完成了「云南大理之旅」',
+        description: '所有计划打卡点均已完成，并生成了旅行手账。',
+        time: '2024-05-25', type: 'success',
+        iconComponent: shallowRef(CircleCheckFilledIcon)
+    },
+    {
+        id: 2, title: '在「大理古城」打卡',
+        description: '上传了3张照片，并写下了感想。',
+        time: '2024-05-20', type: 'primary',
+        iconComponent: shallowRef(LocationIcon)
+    },
+    {
+        id: 3, title: '获得了「旅行达人」成就',
+        description: '累计完成5次旅程，解锁新徽章！',
+        time: '2024-05-15', type: 'warning',
+        iconComponent: shallowRef(Trophy)
+    },
+    {
+        id: 4, title: '创建了新的行程「日本东京动漫考察」',
+        description: '计划已制定，等待招募队员或开始旅行。',
+        time: '2024-04-01', type: 'info',
+        iconComponent: shallowRef(EditPenIcon)
+    }
+]);
+
+// Update achievementsCount based on actual achieved achievements
+onMounted(() => {
+    user.value.achievementsCount = userAchievements.value.filter(a => a.achieved).length;
+    // TODO: 获取用户详细信息、成就、历史动态等
+});
+
+const goToEditProfile = () => {
+    router.push('/profile/edit');
 };
 
-// 修改密码
-const handleChangePassword = async () => {
-    if (!passwordFormRef.value) return;
-    
-    try {
-        await passwordFormRef.value.validate();
-        passwordLoading.value = true;
-        
-        // TODO: 调用API修改密码
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        ElMessage.success('密码修改成功');
-        passwordForm.value = {
-            currentPassword: '',
-            newPassword: '',
-            confirmPassword: ''
-        };
-    } catch (error) {
-        console.error('修改密码失败:', error);
-        ElMessage.error('修改密码失败，请检查输入');
-    } finally {
-        passwordLoading.value = false;
-    }
+// viewJourneyDetail function is no longer needed here as completedJourneys list is removed
+/*
+const viewJourneyDetail = (journeyId) => {
+    ...
 };
+*/
+
 </script>
 
 <style scoped>
@@ -238,59 +178,141 @@ const handleChangePassword = async () => {
     padding: 20px;
 }
 
-.profile-card {
+.profile-header-card {
     margin-bottom: 20px;
 }
 
 .profile-header {
-    text-align: center;
-    padding: 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 30px;
 }
 
-.profile-header h2 {
-    margin: 10px 0;
+.user-details {
+    flex: 1;
+}
+
+.nickname {
+    margin: 0 0 10px 0;
+    font-size: 24px;
 }
 
 .signature {
     color: #666;
     font-size: 14px;
-    margin: 10px 0;
+    margin-bottom: 15px;
+    min-height: 20px; 
 }
 
-.profile-stats {
+.user-stats {
     display: flex;
-    justify-content: space-around;
-    padding: 20px 0;
-    border-top: 1px solid #eee;
-}
-
-.stat-item {
-    text-align: center;
-}
-
-.stat-value {
-    font-size: 24px;
-    font-weight: bold;
-    color: #409EFF;
-}
-
-.stat-label {
+    gap: 25px;
+    color: #888;
     font-size: 14px;
-    color: #666;
-    margin-top: 5px;
+    margin-bottom: 20px;
 }
 
-.card-header {
+.user-stats span {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 5px;
 }
 
-.profile-form {
-    max-width: 500px;
+.user-stats b {
+    font-weight: bold;
+    color: #333;
 }
 
-.password-card {
-    margin-top: 20px;
+/* Styles for new sections, adapted from TravelRecords.vue */
+.profile-section-card {
+    margin-bottom: 20px;
 }
+
+.profile-section-card .card-header span {
+    font-weight: bold;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.achievements-list {
+    padding-top: 10px;
+}
+
+.achievement-item {
+    display: flex;
+    align-items: flex-start; 
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    margin-bottom: 15px;
+    border: 1px solid #e9ecef;
+    min-height: 110px; /* Adjusted height */
+    transition: all 0.2s ease-in-out;
+}
+.achievement-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.achievement-item.achieved {
+    background-color: #f0f9eb; 
+    border-color: #c2e7b0;
+}
+.achievement-item.achieved .achievement-info h4{
+    color: #67c23a;
+}
+
+.achievement-icon {
+    margin-right: 15px;
+    color: #409EFF;
+    flex-shrink: 0; 
+    margin-top: 2px; /* Align icon better with text */
+}
+
+.achievement-item.achieved .achievement-icon {
+    color: #67c23a;
+}
+
+.achievement-info {
+    flex-grow: 1;
+}
+
+.achievement-info h4 {
+    margin: 0 0 8px 0;
+    color: #303133;
+    font-size: 16px;
+}
+
+.achievement-info p {
+    margin: 0 0 8px 0;
+    color: #606266;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.profile-timeline {
+    padding-top: 10px;
+    margin-left: 5px; /* Align timeline better */
+}
+
+.profile-timeline .el-timeline-item h4 {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+.profile-timeline .el-timeline-item p {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.6;
+}
+
+/* Removed styles for completed-journeys-card */
+/*
+.completed-journeys-card .card-header span {
+    ...
+}
+...
+*/
 </style> 
