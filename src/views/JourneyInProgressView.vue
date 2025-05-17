@@ -285,22 +285,22 @@ const allJourneysMock = [ // Using similar mock structure from MyJourneys for co
 // 这些数据将用于筛选出当前行程的打卡记录
 const allCheckinRecordsMock = ref([
     {
-        id: 1, journey_id: 1, journeyTitle: '云南大理之旅', user_id: 101, username: '旅行小能手',
+        id: 1, journey_id: 1, journeyTitle: '云南大理之旅', user_id: 101, username: '蘑菇',
         userAvatar: require('@/assets/mogu.jpg'), location_name: '大理古城南门', photo_urls: [require('@/assets/dali.png')],
         description: '终于来到大理古城啦！', tags: ['古城', '开心'], checked_in_at: '2024-05-20T10:30:00Z'
     },
     {
-        id: 2, journey_id: 1, journeyTitle: '云南大理之旅', user_id: 102, username: '摄影大师',
+        id: 2, journey_id: 1, journeyTitle: '云南大理之旅', user_id: 102, username: '小小月亮',
         userAvatar: require('@/assets/avatar4.jpg'), location_name: '洱海生态廊道', photo_urls: [require('@/assets/tibet.png')],
         description: '洱海边的骑行太惬意了。', tags: ['自然风光', '骑行'], checked_in_at: '2024-05-21T15:00:00Z'
     },
     {
-        id: 3, journey_id: 3, journeyTitle: '日本东京动漫考察', user_id: 101, username: '旅行小能手',
+        id: 3, journey_id: 3, journeyTitle: '日本东京动漫考察', user_id: 101, username: '蘑菇',
         userAvatar: require('@/assets/mogu.jpg'), location_name: '秋叶原电器街', photo_urls: [require('@/assets/tokyo.jpg')],
         description: '秋叶原，二次元的天堂！', tags: ['动漫', '购物'], checked_in_at: '2024-04-10T14:30:00Z'
     },
     {
-        id: 4, journey_id: 1, journeyTitle: '云南大理之旅', user_id: 101, username: '旅行小能手',
+        id: 4, journey_id: 1, journeyTitle: '云南大理之旅', user_id: 101, username: '蘑菇',
         userAvatar: require('@/assets/mogu.jpg'), location_name: '喜洲古镇', photo_urls: [/* require('@/assets/xizhou.jpg') */], // 假设有图片
         description: '喜洲粑粑很好吃！', tags: ['美食', '古镇'], checked_in_at: '2024-05-22T12:30:00Z'
     }

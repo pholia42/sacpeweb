@@ -1,16 +1,34 @@
 <template>
     <div class="profile-container">
         <!-- 顶部个人信息 -->
-        <el-card class="profile-header-card">
-            <div class="profile-header">
-                <el-avatar :size="100" :src="user.avatar">{{ user.nickname.charAt(0) }}</el-avatar>
+        <el-card class="profile-header-card" v-if="user">
+            <div class="profile-main-info">
+                <el-avatar :size="100" :src="user.avatarurl" class="profile-avatar">
+                    <span v-if="!user.avatarurl && user.nickname">{{ user.nickname.charAt(0) }}</span>
+                    <span v-else-if="!user.avatarurl && user.username">{{ user.username.charAt(0) }}</span>
+                </el-avatar>
                 <div class="user-details">
-                    <h2 class="nickname">{{ user.nickname }}</h2>
+                    <div class="username-row">
+                        <h2 class="nickname">{{ user.nickname || '未设置昵称' }}</h2>
+                        <span class="username-tag">@{{ user.username }}</span>
+                    </div>
                     <p class="signature">{{ user.signature || '这位用户很懒，什么都没留下...' }}</p>
-                    <div class="user-stats">
-                        <span><el-icon><Clock /></el-icon> 打卡次数: <b>{{ user.checkinCount }}</b></span>
-                        <span><el-icon><Flag /></el-icon> 完成旅程: <b>{{ user.completedJourneysCount }}</b></span>
-                        <span><el-icon><Trophy /></el-icon> 获得成就: <b>{{ user.achievementsCount }}</b></span>
+                    
+                    <div class="additional-info">
+                        <span v-if="formattedBirthday" class="info-item birthday-item">
+                            <el-icon><Cake /></el-icon> {{ formattedBirthday }}
+                        </span>
+                        <span v-if="user.gender" class="info-item gender-item">
+                            <el-icon v-if="user.gender === '男'"><Male /></el-icon>
+                            <el-icon v-else-if="user.gender === '女'"><Female /></el-icon>
+                            <el-icon v-else-if="user.gender === '保密'"><QuestionFilled /></el-icon>
+                            <span v-else class="gender-text-fallback">{{ user.gender }}</span>
+                            {{ user.gender !== '保密' ? user.gender : '性别保密' }}
+                        </span>
+                        <span v-if="user.skillsDescription" class="info-item skills-item">
+                           <el-icon><PriceTag /></el-icon>
+                           <span class="skills-text">{{ user.skillsDescription }}</span>
+                        </span>
                     </div>
                      <el-button type="primary" plain @click="goToEditProfile" class="edit-profile-btn">
                          <el-icon><Edit /></el-icon> 编辑个人信息
@@ -18,6 +36,7 @@
                 </div>
             </div>
         </el-card>
+        <el-empty v-else description="加载用户信息中或用户未登录..."></el-empty>
 
         <!-- 已完成的旅程列表 (将被替换) -->
         <!-- 
@@ -27,13 +46,13 @@
         -->
 
         <!-- 新增：我的成就 -->
-        <el-card class="achievements-card profile-section-card">
+        <el-card class="achievements-card profile-section-card" v-if="userAchievements.length > 0">
             <template #header>
                 <div class="card-header">
                     <span><el-icon><Trophy /></el-icon> 我的成就</span>
                 </div>
             </template>
-            <div class="achievements-list" v-if="userAchievements.length > 0">
+            <div class="achievements-list">
                 <el-row :gutter="20">
                     <el-col :xs="24" :sm="12" :md="8" v-for="achievement in userAchievements" :key="achievement.id">
                         <div class="achievement-item" :class="{ 'achieved': achievement.achieved }">
@@ -50,17 +69,17 @@
                     </el-col>
                 </el-row>
             </div>
-            <el-empty v-else description="暂无成就，继续努力哦！"></el-empty>
         </el-card>
+        <el-empty v-else-if="user" description="暂无成就，继续努力哦！"></el-empty>
 
         <!-- 新增：历史动态 -->
-        <el-card class="history-card profile-section-card">
+        <el-card class="history-card profile-section-card" v-if="userHistoryRecords.length > 0">
             <template #header>
                 <div class="card-header">
                     <span><el-icon><Tickets /></el-icon> 历史动态</span>
                 </div>
             </template>
-            <el-timeline v-if="userHistoryRecords.length > 0" class="profile-timeline">
+            <el-timeline class="profile-timeline">
                 <el-timeline-item
                     v-for="record in userHistoryRecords"
                     :key="record.id"
@@ -73,29 +92,43 @@
                     <p>{{ record.description }}</p>
                 </el-timeline-item>
             </el-timeline>
-            <el-empty v-else description="暂无历史动态"></el-empty>
         </el-card>
+        <el-empty v-else-if="user" description="暂无历史动态"></el-empty>
 
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, shallowRef } from 'vue'; // shallowRef for icons
+import { ref, onMounted, shallowRef, computed } from 'vue'; // shallowRef for icons, computed for formattedBirthday
 import { useRouter } from 'vue-router';
+import { ElMessage, ElLoading } from 'element-plus';
+import { getCurrentUserProfile } from '@/api/auth.js'; // 引入API
 // Updated icon imports
-import { Clock, Flag, Trophy, Edit, Tickets, Location as LocationIcon, StarFilled, Promotion, EditPen as EditPenIcon, CircleCheckFilled as CircleCheckFilledIcon } from '@element-plus/icons-vue';
+import { Male, Female, User, PriceTag, Cake, CollectionTag, Flag, Trophy, Edit, Tickets, Location as LocationIcon, StarFilled, Promotion, EditPen as EditPenIcon, CircleCheckFilled as CircleCheckFilledIcon, QuestionFilled } from '@element-plus/icons-vue';
 
 const router = useRouter();
 
-// 模拟当前用户信息 (实际应从状态管理或API获取)
-const user = ref({
-    id: 1,
-    nickname: '蘑菇',
-    avatar: require('@/assets/mogu.jpg'),
-    signature: '热爱生活，热爱旅行！',
-    checkinCount: 10,
-    completedJourneysCount: 2,
-    achievementsCount: 5 // This can be dynamically computed from userAchievements.filter(a => a.achieved).length
+// user 状态，初始为 null
+const user = ref(null);
+const isTestUser = ref(localStorage.getItem('isTestUser') === 'true');
+
+const formattedBirthday = computed(() => {
+    if (user.value && user.value.birthday) {
+        try {
+            const date = new Date(user.value.birthday);
+            if (isNaN(date.getTime())) {
+                return null; 
+            }
+            // 不补零
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            return `${month}月${day}日`;
+        } catch (e) {
+            console.error("Error formatting birthday:", e);
+            return null; 
+        }
+    }
+    return null;
 });
 
 // 新增：用户成就数据 (从 TravelRecords.vue 迁移并重命名)
@@ -154,10 +187,59 @@ const userHistoryRecords = ref([
     }
 ]);
 
-// Update achievementsCount based on actual achieved achievements
+const fetchUserProfile = async () => {
+    if (isTestUser.value) {
+        console.log("Profile.vue: Test user mode, loading mock profile data.");
+        user.value = {
+            username: '123456',
+            nickname: '测试蘑菇',
+            avatarurl: '', // Or a mock avatar URL: 'https://via.placeholder.com/100'
+            signature: '这是测试用户的签名，用于展示目的。',
+            phone: '13800138000',
+            email: 'test@example.com',
+            skillsDescription: '测试技能1, 测试技能2',
+            birthday: '2000-01-01',
+            gender: '保密'
+        };
+        // 模拟成就和历史数据，如果测试用户也应该有这些
+        // userAchievements.value = [...] 
+        // userHistoryRecords.value = [...] 
+        return;
+    }
+
+    const loadingInstance = ElLoading.service({ text: '加载中...', background: 'rgba(0, 0, 0, 0.7)' });
+    try {
+        console.log("Profile.vue: Fetching user profile...");
+        const response = await getCurrentUserProfile();
+        console.log("Profile.vue: Received profile data:", response);
+        if (response && response.data && response.data.success) {
+            user.value = response.data.data;
+            console.log("Profile.vue: User data set:", user.value);
+            // 更新成就统计 (如果 user.value.achievementsCount 来自后端，则不需要这行)
+            // user.value.achievementsCount = userAchievements.value.filter(a => a.achieved).length;
+        } else {
+            ElMessage.error(response.data.message || '获取用户信息失败');
+            console.error("Profile.vue: Failed to fetch profile:", response.data);
+        }
+    } catch (error) {
+        ElMessage.error('获取用户信息请求失败，请检查网络或稍后再试');
+        console.error("Profile.vue: Error fetching profile:", error);
+        if (error.response && error.response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('isTestUser');
+            router.push('/'); // Redirect to login if unauthorized
+        }
+    } finally {
+        loadingInstance.close();
+    }
+};
+
 onMounted(() => {
-    user.value.achievementsCount = userAchievements.value.filter(a => a.achieved).length;
-    // TODO: 获取用户详细信息、成就、历史动态等
+    fetchUserProfile();
+    // 静态成就数量统计 (如果后端不直接提供此统计)
+    // user.value.achievementsCount = userAchievements.value.filter(a => a.achieved).length; 
+    // ^^^ This line would error if user.value is null initially.
+    // Consider moving this to after user.value is populated if achievementsCount is not part of UserDTO
 });
 
 const goToEditProfile = () => {
@@ -176,51 +258,105 @@ const viewJourneyDetail = (journeyId) => {
 <style scoped>
 .profile-container {
     padding: 20px;
+    max-width: 900px; /* Added max-width for better layout on wider screens */
+    margin: 0 auto; /* Center the container */
 }
 
 .profile-header-card {
-    margin-bottom: 20px;
+    margin-bottom: 30px; /* Increased margin */
+    border-radius: 12px; /* Softer corners */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Subtle shadow */
 }
 
-.profile-header {
+.profile-main-info {
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* Align items to the top */
     gap: 30px;
+}
+
+.profile-avatar {
+    flex-shrink: 0; /* Prevent avatar from shrinking */
+    border: 3px solid #fff; /* White border around avatar */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* Shadow for avatar */
 }
 
 .user-details {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.username-row {
+    display: flex;
+    align-items: baseline; /* Align nickname and username nicely */
+    margin-bottom: 8px;
+    flex-wrap: wrap; /* Allow wrapping if space is tight */
 }
 
 .nickname {
-    margin: 0 0 10px 0;
-    font-size: 24px;
+    margin: 0;
+    font-size: 26px; /* Slightly larger nickname */
+    font-weight: 600; /* Bolder nickname */
+    color: #303133;
+    margin-right: 10px; /* Space between nickname and username tag */
+}
+
+.username-tag {
+    font-size: 14px;
+    color: #909399; /* Softer color for username */
+    background-color: #f4f4f5;
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 .signature {
-    color: #666;
-    font-size: 14px;
+    color: #606266;
+    font-size: 15px; /* Slightly larger signature */
     margin-bottom: 15px;
     min-height: 20px; 
+    line-height: 1.6;
 }
 
-.user-stats {
+.additional-info {
     display: flex;
-    gap: 25px;
-    color: #888;
-    font-size: 14px;
+    flex-wrap: wrap; 
+    gap: 15px 25px; /* Adjusted gap for better spacing */
     margin-bottom: 20px;
+    align-items: center; /* Vertically align items in a row */
+    padding-top: 5px; /* Add some space above this section */
 }
 
-.user-stats span {
-    display: flex;
+.info-item {
+    display: inline-flex; /* Changed to inline-flex for better wrapping with gap */
     align-items: center;
-    gap: 5px;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.5; /* Ensure consistent line height */
 }
 
-.user-stats b {
-    font-weight: bold;
-    color: #333;
+.info-item .el-icon {
+    margin-right: 6px;
+    font-size: 16px; 
+    color: #009688; 
+    flex-shrink: 0; /* Prevent icon from shrinking */
+}
+.gender-item .el-icon {
+    /* Vertically align gender icon with text if needed, assuming text is slightly taller */
+    /* margin-bottom: -2px; */ 
+}
+.gender-text-fallback {
+    margin-left: 4px; /* If icon is not shown for some gender strings */
+}
+/* Specific alignment for skills if needed, but inline-flex with align-items should handle most cases */
+.skills-item .el-icon {
+   margin-top: 1px; /* Fine-tune icon vertical alignment if needed */
+}
+.skills-text {
+    word-break: break-all; /* Allow long skill descriptions to wrap */
+}
+
+.edit-profile-btn {
+   align-self: flex-start; 
 }
 
 /* Styles for new sections, adapted from TravelRecords.vue */

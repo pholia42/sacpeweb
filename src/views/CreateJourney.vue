@@ -16,7 +16,9 @@
                     <el-form-item label="封面图片" prop="coverImage">
                         <el-upload
                             class="cover-uploader"
-                            action="/api/upload"
+                            action="/api/files/upload"
+                            :data="{ type: 'journey' }"
+                            name="file"
                             :show-file-list="false"
                             :on-success="handleCoverSuccess"
                             :before-upload="beforeCoverUpload"
@@ -251,14 +253,14 @@ const handleCoverSuccess = (response) => {
 // 上传前校验
 const beforeCoverUpload = (file) => {
     const isImage = file.type.startsWith('image/');
-    const isLt2M = file.size / 1024 / 1024 < 2;
+    const isLt10M = file.size / 1024 / 1024 < 10;
 
     if (!isImage) {
         ElMessage.error('上传文件只能是图片格式!');
         return false;
     }
-    if (!isLt2M) {
-        ElMessage.error('上传图片大小不能超过 2MB!');
+    if (!isLt10M) {
+        ElMessage.error('上传图片大小不能超过 10MB!');
         return false;
     }
     return true;

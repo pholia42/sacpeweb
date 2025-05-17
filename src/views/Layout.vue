@@ -2,84 +2,123 @@
   <div class="layout-container">
     <!-- 顶部导航栏 -->
     <el-header class="header fixed-topbar">
-      <div class="logo">旅行协作打卡系统</div>
+      <div class="logo">
+        <img src="@/assets/logo.png" alt="Logo" class="logo-image">
+        <span class="logo-text">山水一程</span>
+      </div>
       <el-menu mode="horizontal" :router="true" :default-active="activeMenuIndex" class="nav-menu">
         <el-menu-item index="/plaza">广场</el-menu-item>
-        <el-menu-item index="/my-journeys">我的旅程</el-menu-item>
-        <el-menu-item index="/travel-records">旅行记录</el-menu-item>
+        <el-menu-item index="/my-journeys" v-if="isLoggedIn">我的旅程</el-menu-item>
+        <el-menu-item index="/travel-records" v-if="isLoggedIn">旅行记录</el-menu-item>
       </el-menu>
       <div class="user-info">
-        <el-dropdown @command="handleCommand">
-          <span class="user-dropdown">
-            <el-avatar :size="32" :src="userAvatar">{{ userAvatar }}</el-avatar>
-            <span class="username">{{ username }}</span>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="profile">个人主页</el-dropdown-item>
-              <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <template v-if="isLoggedIn && loggedInUserNickname">
+          <el-dropdown @command="handleCommand" trigger="click">
+            <span class="user-dropdown">
+              <el-avatar :size="32" :src="loggedInUserAvatarUrl" class="user-avatar-dynamic">
+                 {{ !loggedInUserAvatarUrl && loggedInUserNickname ? loggedInUserNickname.charAt(0).toUpperCase() : (!loggedInUserAvatarUrl ? 'U' : '') }}
+              </el-avatar>
+              <span class="username">{{ loggedInUserNickname }}</span>
+               <el-icon class="el-icon--right" style="margin-left: 4px;"><arrow-down /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">个人主页</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </template>
+        <template v-else>
+          <router-link to="/" class="auth-link-old-style">登录</router-link>
+          <span class="auth-separator-old-style">|</span>
+          <router-link to="/reg" class="auth-link-old-style">注册</router-link>
+        </template>
       </div>
     </el-header>
 
     <!-- 主要内容区域 -->
     <el-main class="main-content">
-      <!-- Router view with a key to potentially help with re-rendering issues -->
       <router-view :key="$route.fullPath"></router-view>
     </el-main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { ArrowDown } from '@element-plus/icons-vue'; // 确保引入
 
 const router = useRouter();
 const route = useRoute();
-// const username = ref(localStorage.getItem('username') || ''); // 读取本地存储用户名（已注释）
-// const userAvatar = ref(localStorage.getItem('userAvatar') || ''); // 读取本地存储头像（已注释）
-const username = ref('蘑菇');
-const userAvatar = require('@/assets/mogu.jpg');
 
-// 计算当前激活的菜单项
+// --- Start: Dynamic user info logic ---
+const loggedInUserNickname = ref(localStorage.getItem('nickname') || '');
+const loggedInUserAvatarUrl = ref(localStorage.getItem('avatarurl') || null);
+const isLoggedIn = computed(() => !!localStorage.getItem('token'));
+
+const updateUserInfoFromStorage = () => {
+  loggedInUserNickname.value = localStorage.getItem('nickname') || '';
+  const avatarUrl = localStorage.getItem('avatarurl');
+  loggedInUserAvatarUrl.value = avatarUrl && avatarUrl.trim() !== '' && avatarUrl !== 'null' ? avatarUrl : null;
+};
+
+const handleUserLoggedIn = () => {
+  updateUserInfoFromStorage();
+};
+
+const handleUserLoggedOut = () => {
+  loggedInUserNickname.value = '';
+  loggedInUserAvatarUrl.value = null;
+};
+
+const handleUserInfoUpdated = () => {
+  updateUserInfoFromStorage();
+};
+
+onMounted(() => {
+  updateUserInfoFromStorage();
+  window.addEventListener('userLoggedIn', handleUserLoggedIn);
+  window.addEventListener('userLoggedOut', handleUserLoggedOut);
+  window.addEventListener('userInfoUpdated', handleUserInfoUpdated);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('userLoggedIn', handleUserLoggedIn);
+  window.removeEventListener('userLoggedOut', handleUserLoggedOut);
+  window.removeEventListener('userInfoUpdated', handleUserInfoUpdated);
+});
+// --- End: Dynamic user info logic ---
+
+// 计算当前激活的菜单项 (from old version)
 const activeMenuIndex = computed(() => {
-  // 如果当前路由是 profile 或其子路由，则不激活主导航中的任何项
   if (route.path.startsWith('/profile')) {
-    return ''; // 返回一个空字符串或任何不存在的 index
+    return ''; 
   }
-  // 否则，让 el-menu 根据路由自动匹配
-  // el-menu 在 router 模式下，会优先使用 route.path 进行匹配
-  // 如果需要更精确的控制，可以返回 route.path 或 route.matched 中更合适的路径
   return route.path; 
 });
 
-// 计算用户名的首字母作为头像显示
-//const userInitials = computed(() => {
-//  return username.value ? username.value.charAt(0).toUpperCase() : '';
-//});
-
-// 处理下拉菜单命令
+// 处理下拉菜单命令 (adapted for dynamic user)
 const handleCommand = (command) => {
-  switch (command) {
-    case 'profile':
-      router.push('/profile');
-      break;
-    case 'logout':
-      handleLogout();
-      break;
+  if (command === 'profile') {
+    router.push('/profile');
+  } else if (command === 'logout') {
+    handleLogout(); // Use the new logout logic
   }
 };
 
-// 处理退出登录
+// 处理退出登录 (new dynamic version)
 const handleLogout = () => {
-  // localStorage.removeItem('username'); // 清除本地存储用户名（已注释）
-  // localStorage.removeItem('userAvatar'); // 清除本地存储头像（已注释）
-  ElMessage.success('已退出登录');
-  router.push('/');
+  localStorage.removeItem('token');
+  localStorage.removeItem('nickname');
+  localStorage.removeItem('avatarurl');
+  localStorage.removeItem('isTestUser');
+  window.dispatchEvent(new CustomEvent('userLoggedOut'));
+  ElMessage.success('已退出登录'); // Keep success message
+  router.push('/'); 
 };
+
 </script>
 
 <style scoped>
@@ -87,16 +126,16 @@ const handleLogout = () => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding-top: 60px; /* 为固定顶栏预留空间 */
+  padding-top: 60px;
 }
 
 .header {
+  height: 60px;
+  padding: 0 20px;
   display: flex;
   align-items: center;
-  padding: 0 20px;
   background-color: #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  height: 60px; /* 显式设置高度 */
 }
 
 .fixed-topbar {
@@ -104,7 +143,7 @@ const handleLogout = () => {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1000; /* 确保在顶层 */
+  z-index: 1000;
 }
 
 .logo {
@@ -112,15 +151,34 @@ const handleLogout = () => {
   font-weight: bold;
   margin-right: 40px;
   color: #409EFF;
+  display: flex;
+  align-items: center;
+}
+
+.logo-image {
+  height: 35px;
+  margin-right: 10px;
+}
+
+.logo-text {
+  font-size: 20px;
 }
 
 .nav-menu {
   flex: 1;
   border-bottom: none;
+  font-size: 16px;
+}
+
+.nav-menu > .el-menu-item {
+  padding: 0 22px !important;
+  font-size: 16px;
 }
 
 .user-info {
   margin-left: 20px;
+  display: flex;
+  align-items: center;
 }
 
 .user-dropdown {
@@ -129,16 +187,28 @@ const handleLogout = () => {
   cursor: pointer;
 }
 
+.user-avatar-dynamic {
+  margin-right: 8px;
+}
+
 .username {
-  margin-left: 8px;
-  font-size: 14px;
+  font-size: 15px !important;
+  margin-left: 10px !important;
+}
+
+.auth-link-old-style {
+  font-size: 15px !important;
+  margin: 0 10px !important;
+}
+
+.el-icon--right {
+  font-size: 15px;
+  margin-left: 8px !important;
 }
 
 .main-content {
   flex: 1;
   padding: 20px;
   background-color: #f5f7fa;
-  /* 移除容器的内边距顶部空间，因为父容器已经有了 */
-  /* padding-top: 0; */ 
 }
 </style>

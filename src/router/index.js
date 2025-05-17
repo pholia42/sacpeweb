@@ -75,20 +75,26 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-    const username = localStorage.getItem('username');
+    const token = localStorage.getItem('token');
     
     // 如果访问登录或注册页面，直接放行
     if (to.path === '/' || to.path === '/reg') {
+        // 优化：如果用户已登录且尝试访问登录/注册页，可以考虑重定向到主页（例如广场页）
+        // if (token && (to.path === '/' || to.path === '/reg')) {
+        //    next('/plaza');
+        //    return;
+        // }
         next();
         return;
     }
     
-    // 如果没有登录，重定向到登录页
-    if (!username) {
+    // 如果没有登录（即没有token），重定向到登录页
+    if (!token) {
         next('/');
         return;
     }
     
+    // 其他情况（有token，访问非登录/注册页面），正常放行
     next();
 });
 

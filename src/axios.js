@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus';
 
 // 创建axios实例
 const instance = axios.create({
-    baseURL: 'http://localhost:8081/api', // 确保与后端端口匹配
+    baseURL: 'http://localhost:8081/api', // 恢复原始 baseURL
     timeout: 10000, // 设置合适的超时时间
     withCredentials: true, // 允许携带cookie等凭证
     headers: {
@@ -15,6 +15,12 @@ const instance = axios.create({
 
 // 添加请求拦截器
 instance.interceptors.request.use(config => {
+    // 新增：从 localStorage 获取 token 并添加到 Authorization 头
+    const token = localStorage.getItem('token'); 
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+
     console.log('请求配置:', config);
     console.log('请求URL:', config.baseURL + config.url);
     console.log('请求方法:', config.method);
